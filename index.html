@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tanári véletlenszerű segéd — Ülésrend & csoportok</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --accent:#3b82f6; --muted:#6b7280;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{margin:0;background:linear-gradient(180deg,#f6f8fb,#eef2ff);color:#111827;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px;}
+    .container{width:100%;max-width:1100px;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06);border:1px solid rgba(15,23,42,0.04)}
+    label{display:block;font-weight:600;margin-bottom:6px}
+    textarea{width:100%;min-height:260px;padding:10px;border-radius:8px;border:1px solid #e6e9ee;font-size:14px;resize:vertical}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:var(--accent);color:white;padding:10px 12px;border-radius:8px;border:0;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(59,130,246,0.12)}
+    .small{padding:6px 8px;font-size:13px;border-radius:8px}
+    .muted{color:var(--muted);font-size:13px;margin-top:6px}
+    .controls{display:flex;flex-direction:column;gap:12px}
+    .result{white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:8px;border:1px dashed #e6eefc;min-height:120px;overflow:auto}
+    input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee}
+    .flex{display:flex;gap:8px;align-items:center}
+    .action-row{display:flex;gap:8px;flex-wrap:wrap}
+    .group-list{display:grid;gap:10px}
+    .group-box{background:#fff;padding:10px;border-radius:8px;border:1px solid #eef2ff}
+    .picked{background:linear-gradient(90deg,#fde68a,#fca5a5);padding:12px;border-radius:8px;font-weight:700}
+    .copy-btn{background:#111827;color:white;padding:6px 8px;border-radius:6px;border:0;cursor:pointer}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} .card{padding:12px} textarea{min-height:180px} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Tanári véletlenszerű segéd</h1>
+        <p class="lead">Ülésrend / csoportok / sorsolás — egyfájlos HTML eszköz</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Input + actions -->
+      <div class="card">
+        <label>Diákok listája (egy név soronként vagy vesszővel elválasztva)</label>
+        <textarea id="namesInput" placeholder="Pl.:&#10;Kovács Anna&#10;Nagy Bence&#10;Szabó Csilla"></textarea>
+        <div class="muted">Használj sortörést vagy vesszőt; az üres sorokat figyelmen kívül hagyjuk.</div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid #eef2ff"/>
+
+        <div class="controls">
+          <div>
+            <label>1) Véletlenszerű sorrend (Shuffle)</label>
+            <div class="row action-row">
+              <button id="shuffleBtn" class="small">Shuffle</button>
+              <button id="shuffleCopy" class="ghost small">Másolás vágólapra</button>
+              <button id="shuffleCsv" class="ghost small">Letöltés CSV</button>
+            </div>
+            <div class="muted">Kattints a Shuffle-re, hogy a lista véletlenszerűen sorrendeződjön.</div>
+          </div>
+
+          <div>
+            <label>2) Diákok random csoportokra bontása</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+              <div style="flex:1;min-width:120px">
+                <input type="number" id="numGroups" min="1" placeholder="Csoportok száma" />
+              </div>
+              <div style="flex:1;min-width:120px">
+                <input type="number" id="groupSize" min="1" placeholder="Vagy csoportméret" />
+              </div>
+              <div style="min-width:160px">
+                <button id="splitBtn" class="small">Bontás</button>
+                <button id="splitCopy" class="ghost small">Másolás</button>
+              </div>
+            </div>
+            <div class="muted">Töltsd ki EGYIK mezőt: vagy add meg a csoportszámot, vagy a csoportméretet. Ha mindkettő üres, az alap 2 csoportra oszt.</div>
+          </div>
+
+          <div>
+            <label>3) Egy diák véletlenszerű kisorsolása</label>
+            <div class="row">
+              <button id="pickBtn" class="small">Sorsolás — Pick one</button>
+              <button id="pickAgain" class="ghost small">Újrasorsol</button>
+            </div>
+            <div class="muted">Kiemeli a kiválasztott tanulót alul a "Kiválasztott" mezőben.</div>
+          </div>
+
+          <div>
+            <label>Extra műveletek</label>
+            <div class="row">
+              <button id="clearBtn" class="ghost small">Törlés</button>
+              <button id="trimBtn" class="ghost small">Whitespace eltávolítása</button>
+              <button id="sortAlpha" class="ghost small">Alfabetikus rendezés</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div class="card">
+        <label>Eredmények</label>
+        <div id="resultArea" class="result" aria-live="polite">Nincs eredmény még — kérj egy műveletet.</div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid #eef2ff"/>
+
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div>
+            <label>Kiválasztott diák</label>
+            <div id="pickedBox" class="picked" style="min-height:44px">—</div>
+          </div>
+          <div>
+            <label>Export</label>
+            <div style="display:flex;gap:8px">
+              <button id="exportCsv" class="small">Export CSV</button>
+              <button id="copyAll" class="small">Másolás eredmény</button>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          Tipp: másold be a listát Excelbe vagy Google Sheets-be soronként, majd használd az eszközt.
+        </footer>
+      </div>
+    </div>
+
+  <script>
+    // --- Utilities ---
+    function parseNames(text){
+      if(!text) return [];
+      // split by newline or comma; trim; remove empties
+      const raw = text.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length>0);
+      return raw;
+    }
+
+    function fisherYatesShuffle(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]] = [a[j],a[i]];
+      }
+      return a;
+    }
+
+    function groupsByCount(list, nGroups){
+      const groups = Array.from({length:nGroups}, ()=>[]);
+      // distribute round-robin for balance
+      let i=0;
+      for(const item of list){
+        groups[i % nGroups].push(item);
+        i++;
+      }
+      return groups;
+    }
+
+    function groupsBySize(list, size){
+      if(size<=0) return [list.slice()];
+      const groups=[];
+      for(let i=0;i<list.length;i+=size){
+        groups.push(list.slice(i,i+size));
+      }
+      return groups;
+    }
+
+    function arrayToCsv(rows){
+      // rows: array of arrays -> CSV text
+      return rows.map(r=> r.map(c => {
+        const s = String(c).replace(/"/g, '""');
+        return `"${s}"`;
+      }).join(',')).join('\n');
+    }
+
+    // --- DOM ---
+    const namesInput = document.getElementById('namesInput');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const shuffleCopy = document.getElementById('shuffleCopy');
+    const shuffleCsv = document.getElementById('shuffleCsv');
+    const resultArea = document.getElementById('resultArea');
+    const numGroups = document.getElementById('numGroups');
+    const groupSize = document.getElementById('groupSize');
+    const splitBtn = document.getElementById('splitBtn');
+    const splitCopy = document.getElementById('splitCopy');
+    const pickBtn = document.getElementById('pickBtn');
+    const pickAgain = document.getElementById('pickAgain');
+    const pickedBox = document.getElementById('pickedBox');
+    const clearBtn = document.getElementById('clearBtn');
+    const trimBtn = document.getElementById('trimBtn');
+    const sortAlpha = document.getElementById('sortAlpha');
+    const exportCsv = document.getElementById('exportCsv');
+    const copyAll = document.getElementById('copyAll');
+
+    // state
+    let lastResult = null; // can be array or groups structure
+    let lastPicked = null;
+
+    // --- Actions ---
+    shuffleBtn.addEventListener('click', ()=>{
+      const list = parseNames(namesInput.value);
+      if(list.length===0){ resultArea.textContent = 'Hiba: nincs név a bemenetben.'; return; }
+      const shuffled = fisherYatesShuffle(list);
+      lastResult = {type:'list', data:shuffled};
+      resultArea.innerHTML = shuffled.map((n,i)=> `${i+1}. ${escapeHtml(n)}`).join('\n');
+      pickedBox.textContent = '—';
+    });
+
+    shuffleCopy.addEventListener('click', async ()=>{
+      if(!lastResult){ notify('Nincs eredmény másoláshoz.'); return; }
+      if(lastResult.type!=='list'){ notify('Az eredmény nem egyszerű lista. Használd a "Másolás eredmény" gombot.'); return; }
+      try{
+        await navigator.clipboard.writeText(lastResult.data.join('\\n'));
+        notify('Másolva a vágólapra.');
+      }catch(e){ notify('Nem sikerült másolni. Használd a "Másolás eredmény" gombot.'); }
+    });
+
+    shuffleCsv.addEventListener('click', ()=>{
+      if(!lastResult || lastResult.type!=='list'){ notify('Nincs egyszerű lista CSV-hez.'); return; }
+      const rows = lastResult.data.map((n,i)=> [i+1, n]);
+      downloadBlob(arrayToCsv(rows), 'shuffle.csv', 'text/csv');
+    });
+
+    splitBtn.addEventListener('click', ()=>{
+      const list = parseNames(namesInput.value);
+      if(list.length===0){ resultArea.textContent = 'Hiba: nincs név a bemenetben.'; return; }
+      const shuffled = fisherYatesShuffle(list);
+      const ng = parseInt(numGroups.value) || null;
+      const gs = parseInt(groupSize.value) || null;
+
+      let groups = [];
+      if(ng && ng>0){
+        groups = groupsByCount(shuffled, Math.min(ng, Math.max(1, shuffled.length)));
+      }else if(gs && gs>0){
+        groups = groupsBySize(shuffled, gs);
+      }else{
+        // default: 2 groups
+        groups = groupsByCount(shuffled, Math.min(2, shuffled.length));
+      }
+
+      lastResult = {type:'groups', data:groups};
+      renderGroups(groups);
+      pickedBox.textContent = '—';
+    });
+
+    splitCopy.addEventListener('click', async ()=>{
+      if(!lastResult || lastResult.type!=='groups'){ notify('Nincs csoportos eredmény másoláshoz.'); return; }
+      const text = lastResult.data.map((g,i)=> `Csoport ${i+1}:\\n${g.join('\\n')}`).join('\\n\\n');
+      try{ await navigator.clipboard.writeText(text); notify('Csoportok másolva a vágólapra.'); }catch(e){ notify('Másolás sikertelen.'); }
+    });
+
+    pickBtn.addEventListener('click', ()=>{
+      const list = parseNames(namesInput.value);
+      if(list.length===0){ pickedBox.textContent = 'Hiba: nincs név a bemenetben.'; return; }
+      const who = list[Math.floor(Math.random()*list.length)];
+      lastPicked = who;
+      pickedBox.textContent = who;
+      pickedBox.scrollIntoView({behavior:'smooth'});
+      // highlight in result area if present
+      highlightPicked(who);
+    });
+
+    pickAgain.addEventListener('click', ()=>{
+      if(!parseNames(namesInput.value).length){ pickedBox.textContent = 'Hiba: nincs név a bemenetben.'; return; }
+      pickBtn.click();
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      namesInput.value = '';
+      resultArea.textContent = 'Törölve.';
+      pickedBox.textContent = '—';
+      lastResult = null;
+      lastPicked = null;
+    });
+
+    trimBtn.addEventListener('click', ()=>{
+      const names = parseNames(namesInput.value);
+      namesInput.value = names.join('\\n');
+      notify('Whitespace eltávolítva, rendezve soronként.');
+    });
+
+    sortAlpha.addEventListener('click', ()=>{
+      const names = parseNames(namesInput.value).sort((a,b)=> a.localeCompare(b, 'hu'));
+      namesInput.value = names.join('\\n');
+      notify('Alfabetikus rendezés megtörtént.');
+    });
+
+    exportCsv.addEventListener('click', ()=>{
+      if(!lastResult){ notify('Nincs eredmény exportáláshoz.'); return; }
+      if(lastResult.type==='list'){
+        const rows = lastResult.data.map((n,i)=> [i+1,n]);
+        downloadBlob(arrayToCsv(rows), 'list.csv', 'text/csv');
+      }else if(lastResult.type==='groups'){
+        const rows = [];
+        lastResult.data.forEach((g,i)=>{
+          // first column group id, second name
+          g.forEach(name => rows.push([`Csoport ${i+1}`, name]));
+        });
+        downloadBlob(arrayToCsv(rows), 'groups.csv', 'text/csv');
+      }else{
+        notify('Ismeretlen eredménytípus.');
+      }
+    });
+
+    copyAll.addEventListener('click', async ()=>{
+      if(!lastResult){ notify('Nincs eredmény másoláshoz.'); return; }
+      let text = '';
+      if(lastResult.type==='list'){ text = lastResult.data.join('\\n'); }
+      else if(lastResult.type==='groups'){ text = lastResult.data.map((g,i)=> `Csoport ${i+1}:\\n${g.join('\\n')}`).join('\\n\\n'); }
+      try{ await navigator.clipboard.writeText(text); notify('Eredmény másolva.'); }catch(e){ notify('Másolás sikertelen.'); }
+    });
+
+    // --- Helpers ---
+    function renderGroups(groups){
+      // produce nice formatted result
+      const html = groups.map((g,i)=> {
+        return `Csoport ${i+1} (${g.length} fő):\\n` + g.map((name,idx)=> `  ${idx+1}. ${escapeHtml(name)}`).join('\\n');
+      }).join('\\n\\n');
+      resultArea.innerHTML = html;
+    }
+
+    function highlightPicked(name){
+      // if lastResult contains the name, re-render with highlight
+      if(!lastResult) return;
+      if(lastResult.type==='list'){
+        resultArea.innerHTML = lastResult.data.map((n,i)=> {
+          if(n === name) return `<span style="background:linear-gradient(90deg,#fde68a,#ffd6a5);padding:2px 6px;border-radius:6px">${i+1}. ${escapeHtml(n)}</span>`;
+          return `${i+1}. ${escapeHtml(n)}`;
+        }).join('\\n');
+      }else if(lastResult.type==='groups'){
+        resultArea.innerHTML = lastResult.data.map((g,i)=>{
+          const items = g.map((n,idx)=> {
+            if(n === name) return `  ${idx+1}. <span style="background:linear-gradient(90deg,#fde68a,#ffd6a5);padding:2px 6px;border-radius:6px">${escapeHtml(n)}</span>`;
+            return `  ${idx+1}. ${escapeHtml(n)}`;
+          }).join('\\n');
+          return `Csoport ${i+1} (${g.length} fő):\\n` + items;
+        }).join('\\n\\n');
+      }
+    }
+
+    function downloadBlob(text, filename, mime='text/plain'){
+      const blob = new Blob([text], {type: mime + ';charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function notify(msg){
+      // small in-page non-blocking notification
+      const old = document.getElementById('__notify');
+      if(old) old.remove();
+      const n = document.createElement('div');
+      n.id='__notify';
+      n.style.position='fixed'; n.style.right='18px'; n.style.bottom='18px';
+      n.style.background='rgba(0,0,0,0.8)'; n.style.color='white'; n.style.padding='10px 12px';
+      n.style.borderRadius='8px'; n.style.zIndex=9999; n.style.boxShadow='0 6px 18px rgba(2,6,23,0.2)';
+      n.textContent = msg;
+      document.body.appendChild(n);
+      setTimeout(()=> n.remove(), 2600);
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
+    }
+
+    // allow pressing Ctrl+Enter to shuffle
+    document.addEventListener('keydown', (e)=>{
+      if(e.ctrlKey && e.key === 'Enter'){ shuffleBtn.click(); }
+    });
+
+    // initial sample
+    namesInput.value = "Kovács Anna\nNagy Bence\nSzabó Csilla\nTóth Dávid\nHorváth Éva\nKiss Lili\nMolnár Péter\nFarkas Gábor";
+  </script>
+</body>
+</html>
